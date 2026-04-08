@@ -3,52 +3,55 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Chatbot AI Floating</title>
+<title>AI Chatbot Premium</title>
 
 <style>
-body {
-    margin: 0;
-    font-family: Arial;
-}
+body { margin: 0; font-family: Arial; }
 
-/* 🔘 Tombol bulat */
+/* 🔘 Floating Button */
 .chat-toggle {
     position: fixed;
     bottom: 20px;
     right: 20px;
-    background: #1a73e8;
-    color: white;
-    width: 60px;
-    height: 60px;
+    background: linear-gradient(135deg, #1a73e8, #19c37d);
+    width: 65px;
+    height: 65px;
     border-radius: 50%;
     display: flex;
     justify-content: center;
     align-items: center;
     cursor: pointer;
-    font-size: 25px;
-    box-shadow: 0 0 10px rgba(0,0,0,0.3);
-}
-
-/* 💬 Box chatbot */
-.chat-box {
-    position: fixed;
-    bottom: 90px;
-    right: 20px;
-    width: 320px;
-    height: 420px;
-    background: #343541;
     color: white;
-    border-radius: 10px;
-    display: none;
+    font-size: 26px;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+    transition: 0.3s;
+}
+.chat-toggle:hover { transform: scale(1.1); }
+
+/* 💬 Chatbox */
+.chatbox {
+    position: fixed;
+    bottom: 100px;
+    right: 20px;
+    width: 350px;
+    height: 500px;
+    backdrop-filter: blur(15px);
+    background: rgba(40,40,40,0.85);
+    border-radius: 15px;
+    display: flex;
     flex-direction: column;
     overflow: hidden;
+    transform: scale(0);
+    transform-origin: bottom right;
+    transition: 0.3s ease;
 }
+.chatbox.active { transform: scale(1); }
 
 /* Header */
 .header {
-    background: #202123;
-    padding: 10px;
+    padding: 12px;
     text-align: center;
+    background: rgba(0,0,0,0.5);
 }
 
 /* Chat */
@@ -58,50 +61,51 @@ body {
     overflow-y: auto;
 }
 
-.msg {
-    margin: 5px 0;
-}
-
+.msg { margin: 8px 0; }
 .user { text-align: right; color: #58a6ff; }
-.bot { text-align: left; }
+.bot { text-align: left; color: #e6e6e6; }
 
 /* Input */
 .input-area {
     display: flex;
+    padding: 8px;
 }
 
 .input-area input {
     flex: 1;
     padding: 10px;
+    border-radius: 8px;
     border: none;
 }
 
 .input-area button {
-    padding: 10px;
+    margin-left: 5px;
     border: none;
-    background: #19c37d;
-    color: white;
+    padding: 10px;
+    border-radius: 8px;
     cursor: pointer;
 }
+
+.send { background: #19c37d; color: white; }
+.mic { background: #ff4d4d; color: white; }
 </style>
 </head>
 
 <body>
 
-<!-- 🔘 Tombol -->
-<div class="chat-toggle">
-  <img src="logo.png" width="30">
-</div>
+<!-- 🔘 Floating Button -->
+<div class="chat-toggle" onclick="toggleChat()">🤖</div>
 
-<!-- 💬 Chatbot -->
-<div id="chatbox" class="chat-box">
-    <div class="header">AI Chatbot</div>
+<!-- 💬 Chatbox -->
+<div id="chatbox" class="chatbox">
+    <div class="header">✨ AI Assistant</div>
 
     <div id="chat" class="chat"></div>
 
     <div class="input-area">
-        <input id="input" placeholder="Tanya sesuatu...">
-        <button onclick="send()">Kirim</button>
+        <input id="input" placeholder="Ketik atau bicara...">
+        <button class="send" onclick="send()">➤</button>
+        <button class="mic" onclick="voice()">🎤</button>
     </div>
 </div>
 
@@ -109,10 +113,10 @@ body {
 const API_KEY = "AIzaSyCkS2iGGfXEiJ0XuRIom0xZYvm_JNz43GI";
 
 let history = [];
+let speaking = true;
 
 function toggleChat() {
-    let box = document.getElementById("chatbox");
-    box.style.display = box.style.display === "flex" ? "none" : "flex";
+    document.getElementById("chatbox").classList.toggle("active");
 }
 
 function addMsg(text, type) {
@@ -124,9 +128,18 @@ function addMsg(text, type) {
     chat.scrollTop = chat.scrollHeight;
 }
 
-async function send() {
+// 🔊 SPEAK
+function speak(text) {
+    if (!speaking) return;
+    let utter = new SpeechSynthesisUtterance(text);
+    utter.lang = "id-ID";
+    speechSynthesis.speak(utter);
+}
+
+// 💬 SEND
+async function send(textVoice = null) {
     let input = document.getElementById("input");
-    let text = input.value;
+    let text = textVoice || input.value;
 
     if (!text) return;
 
@@ -157,11 +170,34 @@ async function send() {
         let reply = data.candidates[0].content.parts[0].text;
         addMsg(reply, "bot");
 
+        speak(reply);
+
         history.push({ text: reply });
 
     } catch {
-        addMsg("Error koneksi AI", "bot");
+        addMsg("Error AI", "bot");
     }
+}
+
+// 🎤 VOICE
+function voice() {
+    let SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+    if (!SpeechRecognition) {
+        alert("Browser tidak support 😢");
+        return;
+    }
+
+    let recog = new SpeechRecognition();
+    recog.lang = "id-ID";
+    recog.start();
+
+    addMsg("🎤 Mendengarkan...", "bot");
+
+    recog.onresult = e => {
+        let text = e.results[0][0].transcript;
+        send(text);
+    };
 }
 </script>
 
