@@ -168,7 +168,7 @@ async function send(textVoice = null) {
     addMsg("Mengetik...", "bot");
 
     try {
-        const res = await fetch("chatbot-backend-production-ee51.up.railway.app", {
+        const res = await fetch("chatbot-backend-production-ee51.up.railway.app/chat", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json"
