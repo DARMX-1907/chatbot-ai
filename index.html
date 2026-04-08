@@ -4,16 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AI Chatbot Premium</title>
-
 <style>
 body { margin: 0; font-family: Arial; }
 
-.chat-toggle img {
-    width: 30px;
-    height: 30px;
-}
-
-/* 🔘 Floating Button */
 .chat-toggle {
     position: fixed;
     bottom: 20px;
@@ -33,7 +26,6 @@ body { margin: 0; font-family: Arial; }
 }
 .chat-toggle:hover { transform: scale(1.1); }
 
-/* 💬 Chatbox */
 .chatbox {
     position: fixed;
     bottom: 100px;
@@ -52,14 +44,13 @@ body { margin: 0; font-family: Arial; }
 }
 .chatbox.active { transform: scale(1); }
 
-/* Header */
 .header {
     padding: 12px;
     text-align: center;
     background: rgba(0,0,0,0.5);
+    color: white;
 }
 
-/* Chat */
 .chat {
     flex: 1;
     padding: 10px;
@@ -70,7 +61,6 @@ body { margin: 0; font-family: Arial; }
 .user { text-align: right; color: #58a6ff; }
 .bot { text-align: left; color: #e6e6e6; }
 
-/* Input */
 .input-area {
     display: flex;
     padding: 8px;
@@ -99,25 +89,23 @@ body { margin: 0; font-family: Arial; }
 <body>
 
 <!-- 🔘 Floating Button -->
-<div class="chat-toggle" onclick="toggleChat()">🤖</div>
+<div class="chat-toggle" onclick="toggleChat()">💬</div>
 
 <!-- 💬 Chatbox -->
 <div id="chatbox" class="chatbox">
     <div class="header">✨ AI Assistant</div>
-
     <div id="chat" class="chat"></div>
-
     <div class="input-area">
-        <input id="input" placeholder="Ketik atau bicara...">
+        <input id="input" placeholder="Ketik atau bicara..." onkeydown="if(event.key==='Enter') send()">
         <button class="send" onclick="send()">➤</button>
         <button class="mic" onclick="voice()">🎤</button>
     </div>
 </div>
 
 <script>
-const API_KEY = "AIzaSyCkS2iGGfXEiJ0XuRIom0xZYvm_JNz43GI";
+// ⚠️ GANTI dengan URL Railway Anda, contoh: https://myapp.up.railway.app
+const SERVER_URL = "https://URL-RAILWAY-ANDA.up.railway.app";
 
-let history = [];
 let speaking = true;
 
 function toggleChat() {
@@ -131,9 +119,9 @@ function addMsg(text, type) {
     div.innerText = text;
     chat.appendChild(div);
     chat.scrollTop = chat.scrollHeight;
+    return div;
 }
 
-// 🔊 SPEAK
 function speak(text) {
     if (!speaking) return;
     let utter = new SpeechSynthesisUtterance(text);
@@ -141,74 +129,48 @@ function speak(text) {
     speechSynthesis.speak(utter);
 }
 
-// 💬 SEND
+// ✅ Fungsi send yang benar — hanya satu, tidak ada duplikat
 async function send(textVoice = null) {
     let input = document.getElementById("input");
-    let text = textVoice || input.value;
+    let text = textVoice || input.value.trim();
 
     if (!text) return;
 
     addMsg(text, "user");
     input.value = "";
 
-    addMsg("Mengetik...", "bot");
-
-    history.push({ text });
+    let typingMsg = addMsg("Mengetik...", "bot");
 
     try {
-        async function send() {
-    let input = document.getElementById("input");
-    let text = input.value;
-
-    if (!text) return;
-
-    addMsg(text, "user");
-    input.value = "";
-
-    addMsg("Mengetik...", "bot");
-
-    try {
-        const res = await fetch("https://chatbot-backend-production-540f.up.railway.app/chat", {
+        const res = await fetch(`${SERVER_URL}/chat`, {
             method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-                message: text
-            })
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ message: text })
         });
+
+        if (!res.ok) throw new Error(`Server error: ${res.status}`);
 
         const data = await res.json();
 
-        document.querySelector(".bot:last-child").remove();
-        addMsg(data.reply, "bot");
+        typingMsg.remove();
 
-    } catch {
-        addMsg("Error koneksi ke server", "bot");
-    }
-}
-
-        let data = await res.json();
-        document.querySelector(".bot:last-child").remove();
-
-        let reply = data.candidates[0].content.parts[0].text;
+        // ✅ Format sesuai response dari Express server (data.reply)
+        let reply = data.reply || "Tidak ada respons dari AI.";
         addMsg(reply, "bot");
-
         speak(reply);
 
-        history.push({ text: reply });
-
-    } catch {
-        addMsg("Error AI", "bot");
+    } catch (err) {
+        typingMsg.remove();
+        addMsg("❌ Error: " + err.message, "bot");
+        console.error(err);
     }
 }
 
-// 🎤 VOICE
 function voice() {
     let SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
     if (!SpeechRecognition) {
-        alert("Browser tidak support 😢");
+        alert("Browser tidak support voice recognition 😢");
         return;
     }
 
@@ -216,11 +178,17 @@ function voice() {
     recog.lang = "id-ID";
     recog.start();
 
-    addMsg("🎤 Mendengarkan...", "bot");
+    let listeningMsg = addMsg("🎤 Mendengarkan...", "bot");
 
     recog.onresult = e => {
+        listeningMsg.remove();
         let text = e.results[0][0].transcript;
         send(text);
+    };
+
+    recog.onerror = () => {
+        listeningMsg.remove();
+        addMsg("❌ Gagal mendengar, coba lagi.", "bot");
     };
 }
 </script>
