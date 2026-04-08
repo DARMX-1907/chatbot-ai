@@ -170,7 +170,7 @@ async function send(textVoice = null) {
     addMsg("Mengetik...", "bot");
 
     try {
-        const res = await fetch("http://localhost:3000/chat", {
+        const res = await fetch("chatbot-backend-production-ee51.up.railway.app", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json"
